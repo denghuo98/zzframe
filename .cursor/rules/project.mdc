@@ -1,0 +1,76 @@
+---
+alwaysApply: true
+---
+
+# ZZFrame - Golang 开发框架规范
+
+
+## 代码规范
+
+### 1. 命名规范
+
+- **包名**: 使用小写字母，不使用下划线或驼峰，如 `userservice`
+- **文件名**: 使用小写字母和下划线，如 `user_handler.go`
+- **结构体**: 使用 PascalCase，如 `UserService`
+- **接口**: 以 `-er` 或 `-able` 结尾，如 `Reader`, `Configurable`
+- **常量**: 公开常量使用 PascalCase，私有常量使用 camelCase
+- **变量**: 使用 camelCase，如 `userName`
+
+### 2. 错误处理
+
+- 使用自定义错误类型，包含错误码和错误信息
+- 错误应该被包装并向上传递，保留调用栈信息
+- 使用 `fmt.Errorf("context: %w", err)` 包装错误
+
+```go
+// 推荐
+if err != nil {
+    return fmt.Errorf("failed to create user: %w", err)
+}
+
+// 不推荐
+if err != nil {
+    return err
+}
+```
+
+
+### 3. 注释规范
+
+- 所有导出的函数、类型必须有注释
+- 注释以被注释对象的名称开头
+- 使用中文注释时保持简洁清晰
+
+```go
+// UserService 提供用户相关的业务逻辑处理
+type UserService struct {}
+
+// CreateUser 创建新用户
+// 参数:
+//   - ctx: 上下文
+//   - req: 创建用户请求
+// 返回:
+//   - *User: 创建的用户信息
+//   - error: 错误信息
+func (s *UserService) CreateUser(ctx context.Context, req *CreateUserReq) (*User, error) {}
+```
+
+
+
+## Git 提交规范
+
+```
+<type>(<scope>): <subject>
+
+<body>
+```
+
+类型:
+- feat: 新功能
+- fix: 修复 bug
+- docs: 文档变更
+- style: 代码格式
+- refactor: 重构
+- test: 测试相关
+- chore: 构建/工具相关
+
