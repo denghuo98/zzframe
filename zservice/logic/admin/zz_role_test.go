@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/test/gtest"
+	"github.com/samber/lo"
 
 	"github.com/denghuo98/zzframe/internal/dao"
 	"github.com/denghuo98/zzframe/internal/model/entity"
@@ -26,8 +27,8 @@ func setupTestDB() {
 			},
 		},
 	})
-	// 创建表结构
-	createTableSQL := `
+	// 创建角色表
+	createRoleTableSQL := `
 	CREATE TABLE zz_admin_role (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name VARCHAR(255) NOT NULL,
@@ -39,22 +40,34 @@ func setupTestDB() {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	`
+
+	// 创建角色菜单关联表
+	createRoleMenuTableSQL := `
+	CREATE TABLE zz_admin_role_menu (
+		role_id INTEGER NOT NULL,
+		menu_id INTEGER NOT NULL,
+		PRIMARY KEY (role_id, menu_id)
+	);
+	`
+
 	ctx := gctx.New()
-	_, err := g.DB().Exec(ctx, createTableSQL)
+	_, err := g.DB().Exec(ctx, createRoleTableSQL)
 	if err != nil {
 		panic(err)
 	}
 
+	_, err = g.DB().Exec(ctx, createRoleMenuTableSQL)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // cleanupTestDB 清理测试数据库
 func cleanupTestDB() {
 	ctx := gctx.New()
-	// 删除表
-	_, err := g.DB().Exec(ctx, "DROP TABLE IF EXISTS zz_admin_role")
-	if err != nil {
-		panic(err)
-	}
+	// 删除表（注意顺序，先删除有外键依赖的表）
+	g.DB().Exec(ctx, "DROP TABLE IF EXISTS zz_admin_role_menu")
+	g.DB().Exec(ctx, "DROP TABLE IF EXISTS zz_admin_role")
 }
 
 func TestAdminRole_RoleEdit(t *testing.T) {
@@ -522,6 +535,188 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
+			t.Assert(len(result.List), 0)
+		})
+	})
+}
+
+func TestAdminRole_ListWithMenus(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		// 设置测试数据库
+		setupTestDB()
+		defer cleanupTestDB()
+
+		ctx := gctx.New()
+		s := &sAdminRole{}
+
+		// 创建测试角色
+		testRoles := []admin.RoleEditInput{
+			{
+				AdminRole: entity.AdminRole{
+					Name:   "管理员",
+					Key:    "admin",
+					Remark: "系统管理员",
+					Sort:   1,
+					Status: 1,
+				},
+				MenuIds: []int64{1, 2, 3, 4, 5}, // 绑定5个菜单
+			},
+			{
+				AdminRole: entity.AdminRole{
+					Name:   "编辑员",
+					Key:    "editor",
+					Remark: "内容编辑员",
+					Sort:   2,
+					Status: 1,
+				},
+				MenuIds: []int64{2, 3}, // 绑定2个菜单
+			},
+			{
+				AdminRole: entity.AdminRole{
+					Name:   "访客",
+					Key:    "guest",
+					Remark: "普通访客",
+					Sort:   3,
+					Status: 1,
+				},
+				MenuIds: []int64{}, // 不绑定菜单
+			},
+			{
+				AdminRole: entity.AdminRole{
+					Name:   "测试员",
+					Key:    "tester",
+					Remark: "测试人员",
+					Sort:   4,
+					Status: 1,
+				},
+				MenuIds: []int64{1, 3, 5, 7, 9}, // 绑定5个菜单
+			},
+		}
+
+		// 批量创建测试角色
+		for _, role := range testRoles {
+			_, err := s.Edit(ctx, role)
+			t.AssertNil(err)
+		}
+
+		// 测试角色列表包含菜单ID
+		t.Run("ListWithEmbedMenus", func(subT *testing.T) {
+			input := admin.RoleListInput{
+				PageReq: zform.PageReq{
+					Page:    1,
+					PerPage: 10,
+				},
+			}
+
+			result, total, err := s.List(ctx, input)
+			t.AssertNil(err)
+			t.Assert(total, 4)
+			t.Assert(len(result.List), 4)
+
+			// 验证每个角色的菜单ID
+			for _, item := range result.List {
+				switch item.Key {
+				case "admin":
+					// 管理员有5个菜单
+					t.Assert(len(item.MenuIds), 5)
+					t.Assert(lo.Contains(item.MenuIds, int64(1)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(2)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(3)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(4)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(5)), true)
+
+				case "editor":
+					// 编辑员有2个菜单
+					t.Assert(len(item.MenuIds), 2)
+					t.Assert(lo.Contains(item.MenuIds, int64(2)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(3)), true)
+
+				case "guest":
+					// 访客没有菜单
+					t.Assert(len(item.MenuIds), 0)
+
+				case "tester":
+					// 测试员有5个菜单
+					t.Assert(len(item.MenuIds), 5)
+					t.Assert(lo.Contains(item.MenuIds, int64(1)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(3)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(5)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(7)), true)
+					t.Assert(lo.Contains(item.MenuIds, int64(9)), true)
+				}
+			}
+		})
+
+		// 测试带筛选条件的角色列表包含菜单ID
+		t.Run("ListWithFilterAndEmbedMenus", func(subT *testing.T) {
+			input := admin.RoleListInput{
+				PageReq: zform.PageReq{
+					Page:    1,
+					PerPage: 10,
+				},
+				Name: "员", // 筛选包含"员"的角色
+			}
+
+			result, total, err := s.List(ctx, input)
+			t.AssertNil(err)
+			t.Assert(total, 3) // 管理员、编辑员、测试员
+
+			// 验证每个角色都有正确的菜单ID
+			for _, item := range result.List {
+				switch item.Key {
+				case "admin":
+					t.Assert(len(item.MenuIds), 5)
+				case "editor":
+					t.Assert(len(item.MenuIds), 2)
+				case "tester":
+					t.Assert(len(item.MenuIds), 5)
+				}
+			}
+		})
+
+		// 测试分页时菜单ID正确嵌入
+		t.Run("ListWithPaginationAndEmbedMenus", func(subT *testing.T) {
+			// 第一页
+			input := admin.RoleListInput{
+				PageReq: zform.PageReq{
+					Page:    1,
+					PerPage: 2,
+				},
+			}
+
+			result1, total, err := s.List(ctx, input)
+			t.AssertNil(err)
+			t.Assert(total, 4)
+			t.Assert(len(result1.List), 2)
+
+			// 第二页
+			input.Page = 2
+			result2, total, err := s.List(ctx, input)
+			t.AssertNil(err)
+			t.Assert(total, 4)
+			t.Assert(len(result2.List), 2)
+
+			// 验证两页的角色都有正确的菜单ID
+			allResults := append(result1.List, result2.List...)
+			for _, item := range allResults {
+				// MenuIds 字段应该存在且不为 nil
+				t.AssertNE(item.MenuIds, nil)
+			}
+		})
+
+		// 测试空列表的 embedMenus 处理
+		t.Run("ListEmptyWithEmbedMenus", func(subT *testing.T) {
+			input := admin.RoleListInput{
+				PageReq: zform.PageReq{
+					Page:    1,
+					PerPage: 10,
+				},
+				Name: "不存在的角色名称",
+			}
+
+			result, total, err := s.List(ctx, input)
+			t.AssertNil(err)
+			t.Assert(total, 0)
 			t.Assert(len(result.List), 0)
 		})
 	})

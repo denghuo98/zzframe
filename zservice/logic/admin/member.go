@@ -5,6 +5,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/grand"
 	"github.com/samber/lo"
 
@@ -84,9 +85,14 @@ func (s *sAdminMember) List(ctx g.Ctx, in *adminSchema.MemberListInput) (out *ad
 	total = count
 
 	// 分页查询
-	var list []*entity.AdminMember
+	var list []*adminSchema.MemberListOutputItem
 	if err = m.Page(in.Page, in.PerPage).OrderDesc(cols.Id).Scan(&list); err != nil {
 		return nil, 0, gerror.Wrap(err, zconsts.ErrorORM)
+	}
+
+	// 嵌入角色
+	if err = s.embedRoles(ctx, list); err != nil {
+		return nil, 0, err
 	}
 
 	out = &adminSchema.MemberListOutput{
@@ -291,6 +297,23 @@ func (s *sAdminMember) UpdatePassword(ctx g.Ctx, in *adminSchema.MemberUpdatePas
 	return nil
 }
 
+func (s *sAdminMember) Delete(ctx g.Ctx, in *adminSchema.MemberDeleteInput) (err error) {
+	if in.Id <= 0 {
+		return gerror.New("用户ID不能为空")
+	}
+	cols := dao.AdminMember.Columns()
+	if ok, err := dao.AdminMember.Ctx(ctx).WherePri(in.Id).Exist(); err != nil {
+		return gerror.Wrap(err, zconsts.ErrorORM)
+	} else if !ok {
+		return gerror.New("用户不存在")
+	}
+	// 软删除用户，将用户的状态设置成为禁用状态
+	if _, err = dao.AdminMember.Ctx(ctx).WherePri(in.Id).Data(g.Map{cols.Status: zconsts.StatusDisable}).Update(); err != nil {
+		return gerror.Wrap(err, zconsts.ErrorORM)
+	}
+	return nil
+}
+
 func (s *sAdminMember) updateRoles(tx gdb.TX, in *adminSchema.MemberUpdateRoleInput) (err error) {
 	// 校验用户是否存在
 	if ok, err := g.Model(dao.AdminMember.Table()).TX(tx).Where(dao.AdminMember.Columns().Id, in.Id).Exist(); err != nil {
@@ -330,19 +353,41 @@ func (s *sAdminMember) updateRoles(tx gdb.TX, in *adminSchema.MemberUpdateRoleIn
 	return nil
 }
 
-func (s *sAdminMember) Delete(ctx g.Ctx, in *adminSchema.MemberDeleteInput) (err error) {
-	if in.Id <= 0 {
-		return gerror.New("用户ID不能为空")
-	}
-	cols := dao.AdminMember.Columns()
-	if ok, err := dao.AdminMember.Ctx(ctx).WherePri(in.Id).Exist(); err != nil {
-		return gerror.Wrap(err, zconsts.ErrorORM)
-	} else if !ok {
-		return gerror.New("用户不存在")
-	}
-	// 软删除用户，将用户的状态设置成为禁用状态
-	if _, err = dao.AdminMember.Ctx(ctx).WherePri(in.Id).Data(g.Map{cols.Status: zconsts.StatusDisable}).Update(); err != nil {
+// embedRoles 查询中嵌入用户的角色列表
+func (s *sAdminMember) embedRoles(ctx g.Ctx, list []*adminSchema.MemberListOutputItem) (err error) {
+	memberIds := lo.Map(list, func(item *adminSchema.MemberListOutputItem, _ int) int64 {
+		return item.Id
+	})
+
+	relations := make([]*entity.AdminMemberRole, 0)
+	amCols := dao.AdminMemberRole.Columns()
+	if err = dao.AdminMemberRole.Ctx(ctx).WhereIn(amCols.MemberId, memberIds).Scan(&relations); err != nil {
 		return gerror.Wrap(err, zconsts.ErrorORM)
 	}
-	return nil
+
+	// 将数组转换成 Map 映射
+	memberRoleIdsMap := lo.GroupByMap(relations, func(item *entity.AdminMemberRole) (int64, int64) {
+		return item.MemberId, item.RoleId
+	})
+
+	// 查询对应的角色详情
+	roleIds := lo.UniqMap(relations, func(item *entity.AdminMemberRole, _ int) int64 {
+		return item.RoleId
+	})
+
+	roles := make([]*entity.AdminRole, 0, len(roleIds))
+	if err = dao.AdminRole.Ctx(ctx).WhereIn(dao.AdminRole.Columns().Id, roleIds).Scan(&roles); err != nil {
+		return gerror.Wrap(err, zconsts.ErrorORM)
+	}
+
+	// 绑定到对应的用户上
+	for _, item := range list {
+		roleIds := gconv.SliceInt64(memberRoleIdsMap[item.Id])
+		roles := lo.Filter(roles, func(item *entity.AdminRole, _ int) bool {
+			return lo.Contains(roleIds, item.Id)
+		})
+		item.RoleIds = roleIds
+		item.Roles = roles
+	}
+	return
 }

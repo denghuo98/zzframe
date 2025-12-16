@@ -6,6 +6,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/samber/lo"
 
 	"github.com/denghuo98/zzframe/internal/dao"
@@ -143,9 +144,8 @@ func (s *sAdminRole) Delete(ctx g.Ctx, in adminSchema.RoleDeleteInput) (err erro
 
 func (s *sAdminRole) List(ctx g.Ctx, in adminSchema.RoleListInput) (out *adminSchema.RoleListOutput, totalCount int, err error) {
 	var (
-		m      = dao.AdminRole.Ctx(ctx)
-		models []*entity.AdminRole
-		cols   = dao.AdminRole.Columns()
+		m    = dao.AdminRole.Ctx(ctx)
+		cols = dao.AdminRole.Columns()
 	)
 
 	if in.Name != "" {
@@ -163,11 +163,18 @@ func (s *sAdminRole) List(ctx g.Ctx, in adminSchema.RoleListInput) (out *adminSc
 		return nil, 0, gerror.Wrap(err, zconsts.ErrorORM)
 	}
 
-	if err = m.Page(in.Page, in.PerPage).Order(fmt.Sprintf("%s asc, %s asc", cols.Sort, cols.Id)).Scan(&models); err != nil {
+	var list []*adminSchema.RoleListOutputItem
+	if err = m.Page(in.Page, in.PerPage).Order(fmt.Sprintf("%s asc, %s asc", cols.Sort, cols.Id)).Scan(&list); err != nil {
 		return nil, 0, gerror.Wrap(err, zconsts.ErrorORM)
 	}
+
+	// 嵌入菜单ID
+	if err = s.embedMenus(ctx, list); err != nil {
+		return nil, 0, err
+	}
+
 	out = new(adminSchema.RoleListOutput)
-	out.List = models
+	out.List = list
 	return out, totalCount, nil
 }
 
@@ -220,4 +227,32 @@ func (s *sAdminRole) updateMenus(tx gdb.TX, in *adminSchema.RoleUpdateMenuInput)
 		}
 	}
 	return nil
+}
+
+// embedMenus 查询中嵌入角色的菜单ID列表
+func (s *sAdminRole) embedMenus(ctx g.Ctx, list []*adminSchema.RoleListOutputItem) (err error) {
+	roleIds := lo.Map(list, func(item *adminSchema.RoleListOutputItem, _ int) int64 {
+		return item.Id
+	})
+
+	relations := make([]*entity.AdminRoleMenu, 0)
+	rmCols := dao.AdminRoleMenu.Columns()
+	if err = dao.AdminRoleMenu.Ctx(ctx).WhereIn(rmCols.RoleId, roleIds).Scan(&relations); err != nil {
+		return gerror.Wrap(err, zconsts.ErrorORM)
+	}
+
+	// 将数组转换成 Map 映射
+	roleMenuIdsMap := lo.GroupByMap(relations, func(item *entity.AdminRoleMenu) (int64, int64) {
+		return item.RoleId, item.MenuId
+	})
+
+	// 绑定到对应的角色上
+	for _, item := range list {
+		menuIds := gconv.SliceInt64(roleMenuIdsMap[item.Id])
+		if menuIds == nil {
+			menuIds = make([]int64, 0)
+		}
+		item.MenuIds = menuIds
+	}
+	return
 }

@@ -80,7 +80,13 @@ type MemberListInput struct {
 	Status   int    `json:"status" dc:"状态"`
 }
 
+type MemberListOutputItem struct {
+	*entity.AdminMember
+	RoleIds []int64             `json:"roleIds" dc:"绑定的角色 ID"`
+	Roles   []*entity.AdminRole `json:"roles" dc:"绑定的角色列表"`
+}
+
 // MemberListOutput 服务层-系统用户列表输出
 type MemberListOutput struct {
-	List []*entity.AdminMember `json:"list" dc:"用户列表"`
+	List []*MemberListOutputItem `json:"list" dc:"用户列表"`
 }

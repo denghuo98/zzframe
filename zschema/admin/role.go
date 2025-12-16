@@ -24,9 +24,15 @@ type RoleListInput struct {
 	Status int    `json:"status" dc:"角色状态"`
 }
 
+// RoleListOutputItem 服务层-角色列表输出项
+type RoleListOutputItem struct {
+	*entity.AdminRole
+	MenuIds []int64 `json:"menuIds" dc:"绑定的菜单ID列表"`
+}
+
 // RoleListOutput 服务层-角色列表出参
 type RoleListOutput struct {
-	List []*entity.AdminRole `json:"list" dc:"角色列表"`
+	List []*RoleListOutputItem `json:"list" dc:"角色列表"`
 }
 
 // RoleUpdateFields 角色允许更新的数据字段

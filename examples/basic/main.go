@@ -31,9 +31,6 @@ func main() {
 	s.Group("/", func(group *ghttp.RouterGroup) {
 		zcontroller.Admin(ctx, group)
 	})
-	s.SetPort(9090)
-	s.SetOpenApiPath("/api.json")
-	s.SetSwaggerPath("/swagger")
 
 	// 初始化 casbin
 	zcasbin.InitEnforcer(ctx)
