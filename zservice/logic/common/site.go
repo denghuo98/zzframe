@@ -15,6 +15,7 @@ import (
 	"github.com/denghuo98/zzframe/zconsts"
 	adminSchema "github.com/denghuo98/zzframe/zschema/admin"
 	commonSchema "github.com/denghuo98/zzframe/zschema/common"
+	systemSchema "github.com/denghuo98/zzframe/zschema/system"
 	"github.com/denghuo98/zzframe/zschema/zweb"
 	"github.com/denghuo98/zzframe/zservice"
 )
@@ -103,6 +104,10 @@ func (s *sCommonSite) InitSuperAdmin(ctx g.Ctx) (err error) {
 func (s *sCommonSite) AccountLogin(ctx g.Ctx, in *commonSchema.SiteAccountLoginInput) (out *commonSchema.SiteLoginOutput, err error) {
 	defer func() {
 		// 推送登录事件
+		zservice.SysLoginLog().Push(ctx, &systemSchema.SysLoginLogPushInput{
+			Response: out,
+			Error:    err,
+		})
 	}()
 
 	var mb *entity.AdminMember

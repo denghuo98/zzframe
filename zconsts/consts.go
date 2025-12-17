@@ -8,7 +8,8 @@ const (
 	SuperRoleKey              = "super"   // 超管角色唯一标识符，通过角色验证超管
 	DefaultSuperAdminUsername = "superAdmin"
 	DefaultSuperAdminPassword = "zzframe@admin123"
-	MaxServeLogContentLen     = 2048 // 最大保留服务日志内容大小
+	MaxServeLogContentLen     = 2048           // 最大保留服务日志内容大小
+	EventServerClose          = "server.close" // 服务关闭事件
 )
 
 // RequestEncryptKey

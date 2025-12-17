@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	golang.org/x/image v0.23.0 // indirect
 )
 
@@ -35,6 +36,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
+	github.com/kayon/iploc v0.0.0-20200312105652-bda3e968a794
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

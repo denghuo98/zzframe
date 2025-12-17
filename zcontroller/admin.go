@@ -6,6 +6,7 @@ import (
 
 	adminController "github.com/denghuo98/zzframe/zcontroller/admin"
 	commonController "github.com/denghuo98/zzframe/zcontroller/common"
+	systemController "github.com/denghuo98/zzframe/zcontroller/system"
 	"github.com/denghuo98/zzframe/zservice"
 )
 
@@ -25,6 +26,7 @@ func Admin(ctx g.Ctx, group *ghttp.RouterGroup) {
 			adminController.Menu,
 			adminController.Role,
 			adminController.Member,
+			systemController.SysLoginLog,
 		)
 	})
 }
