@@ -104,8 +104,7 @@ func NewAdapter(link string) (adp *adapter, err error) {
 		return
 	}
 
-	// err = adp.createPolicyTable()
-
+	err = adp.createPolicyTable()
 	return
 }
 

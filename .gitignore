@@ -43,3 +43,6 @@ temp/
 # Build output
 dist/
 
+*.db
+*.sqlite
+config.yaml
