@@ -23,9 +23,13 @@ func init() {
 // 如果没有配置，则默认使用 sqlite，sqlite 文件路径自动生成在当前项目根目录下
 // 此函数会自动设置 GF 的数据库配置，并在初始化完成后返回
 func InitDB(ctx g.Ctx) error {
-	// 读取数据库配置
 
-	if !gdb.IsConfigured() {
+	// 尝试读取数据库配置
+	err := g.Try(ctx, func(ctx g.Ctx) {
+		g.DB().GetConfig()
+	})
+
+	if err != nil {
 		g.Log().Warning(ctx, "未配置数据库连接，使用默认 SQLite 数据库")
 		gdb.SetConfig(gdb.Config{
 			"default": getDefaultSQLiteConfig(),
