@@ -7,13 +7,16 @@ import (
 
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
-	"github.com/denghuo98/zzframe/internal/dao"
-	"github.com/denghuo98/zzframe/zconsts"
-	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
+	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gfile"
 	"github.com/gogf/gf/v2/os/gres"
 	"github.com/gogf/gf/v2/text/gstr"
+
+	"github.com/denghuo98/zzframe/internal/dao"
+	"github.com/denghuo98/zzframe/zconsts"
+
+	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 )
 
 const (
@@ -28,9 +31,11 @@ var Enforcer *casbin.Enforcer
 
 // InitEnforcer 初始化
 func InitEnforcer(ctx context.Context) {
+	dbConfig, _ := gdb.GetConfigGroup("default")
+
 	var (
-		link   = g.Cfg().MustGet(ctx, "database.default.link")
-		a, err = NewAdapter(link.String())
+		link   = dbConfig[0].Link
+		a, err = NewAdapter(link)
 	)
 
 	if err != nil {

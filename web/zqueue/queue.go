@@ -59,8 +59,25 @@ var (
 func init() {
 	mqProducerInstanceMap = make(map[string]MqProducer)
 	mqConsumerInstanceMap = make(map[string]MqConsumer)
-	if err := g.Cfg().MustGet(ctx, "queue").Scan(&config); err != nil {
-		Logger().Warningf(ctx, "queue init err:%+v", err)
+	configContent := g.Cfg().MustGet(ctx, "queue")
+	if configContent != nil {
+		if err := configContent.Struct(&config); err != nil {
+			Logger().Warningf(ctx, "queue init err:%+v", err)
+		}
+	} else {
+		g.Log().Warningf(ctx, "消息队列配置为空，使用默认配置")
+		config = Config{
+			Switch:    true,
+			Driver:    "disk",
+			GroupName: "default",
+			Disk: &disk.Config{
+				Path:         "./tmp/diskqueue",
+				BatchSize:    100,
+				BatchTime:    1,
+				SegmentSize:  10485760,
+				SegmentLimit: 3000,
+			},
+		}
 	}
 }
 

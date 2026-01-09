@@ -7,8 +7,8 @@ import (
 	"github.com/denghuo98/zzframe/zcmd"
 	"github.com/denghuo98/zzframe/zservice"
 
+	_ "github.com/denghuo98/zzframe/zdb/zmigrate"
 	_ "github.com/denghuo98/zzframe/zservice/logic"
-	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	_ "github.com/gogf/gf/contrib/nosql/redis/v2"
 )
 

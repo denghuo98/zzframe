@@ -10,26 +10,39 @@ import (
 
 	"github.com/casbin/casbin/v2/model"
 	"github.com/casbin/casbin/v2/persist"
-	"github.com/denghuo98/zzframe/internal/dao"
 	"github.com/gogf/gf/v2/database/gdb"
+
+	"github.com/denghuo98/zzframe/internal/dao"
 )
 
 var defaultTableName = dao.AdminRoleCasbin.Table()
 
 const (
-	dropPolicyTableSql   = `DROP TABLE IF EXISTS %s`
-	createPolicyTableSql = `
-CREATE TABLE IF NOT EXISTS %s (
-  id bigint(20) NOT NULL AUTO_INCREMENT,
-  p_type varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  v0 varchar(256) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  v1 varchar(256) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  v2 varchar(256) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  v3 varchar(256) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  v4 varchar(256) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  v5 varchar(256) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+	dropPolicyTableSql        = `DROP TABLE IF EXISTS %s`
+	createPolicyMysqlTableSql = `
+CREATE TABLE zz_admin_role_casbin (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  p_type varchar(64) DEFAULT NULL,
+  v0 varchar(256) DEFAULT NULL,
+  v1 varchar(256) DEFAULT NULL,
+  v2 varchar(256) DEFAULT NULL,
+  v3 varchar(256) DEFAULT NULL,
+  v4 varchar(256) DEFAULT NULL,
+  v5 varchar(256) DEFAULT NULL,
   PRIMARY KEY (id) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '管理员_casbin权限表' ROW_FORMAT = Dynamic;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC COMMENT='管理员_casbin权限表';
+`
+	createPolicySQLiteTableSql = `
+CREATE TABLE IF NOT EXISTS zz_admin_role_casbin (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  p_type TEXT,
+  v0 TEXT,
+  v1 TEXT,
+  v2 TEXT,
+  v3 TEXT,
+  v4 TEXT,
+  v5 TEXT
+);
 `
 )
 
@@ -91,7 +104,7 @@ func NewAdapter(link string) (adp *adapter, err error) {
 		return
 	}
 
-	err = adp.createPolicyTable()
+	// err = adp.createPolicyTable()
 
 	return
 }
@@ -102,7 +115,12 @@ func (a *adapter) model() *gdb.Model {
 
 // create a policy table when it's not exists.
 func (a *adapter) createPolicyTable() (err error) {
-	_, err = a.db.Exec(context.TODO(), fmt.Sprintf(createPolicyTableSql, a.table))
+	switch a.db.GetConfig().Type {
+	case "mysql":
+		_, err = a.db.Exec(context.TODO(), createPolicyMysqlTableSql)
+	case "sqlite":
+		_, err = a.db.Exec(context.TODO(), createPolicySQLiteTableSql)
+	}
 	return
 }
 

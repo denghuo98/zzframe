@@ -27,6 +27,7 @@ func Admin(ctx g.Ctx, group *ghttp.RouterGroup) {
 			adminController.Role,
 			adminController.Member,
 			systemController.SysLoginLog,
+			commonController.Upload,
 		)
 	})
 }

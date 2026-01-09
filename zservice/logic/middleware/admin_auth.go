@@ -45,7 +45,7 @@ func (s *sMiddleware) IsExceptAuth(ctx g.Ctx, path string) bool {
 	var exceptAuth []string
 	// 从缓存中获取不需要验证权限的路由地址
 	v, err := zcache.Instance().Get(ctx, "exceptAuth")
-	if err != nil {
+	if err != nil && !(err.Error() == "cache expired") {
 		g.Log().Error(ctx, "从缓存获取不需要验证权限的路由地址失败", err)
 	}
 
