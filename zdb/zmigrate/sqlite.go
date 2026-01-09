@@ -2,7 +2,7 @@ package zmigrate
 
 // sqlite 建表语句
 
-var createAdminMemberTableSQLSQLite = `
+var createAdminMemberTableSQLite = `
 -- 系统管理员表
 CREATE TABLE IF NOT EXISTS zz_admin_member (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS zz_admin_member (
 );
 `
 
-var createAdminMemberRoleTableSQLSQLite = `
+var createAdminMemberRoleTableSQLite = `
 -- 管理员角色关联表
 CREATE TABLE IF NOT EXISTS zz_admin_member_role (
   member_id INTEGER NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS zz_admin_member_role (
 );
 `
 
-var createAdminMenuTableSqlSQLite = `
+var createAdminMenuTableSQLite = `
 CREATE TABLE IF NOT EXISTS zz_admin_menu (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   pid INTEGER DEFAULT 0,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS zz_admin_menu (
 );
 `
 
-var createAdminRoleTableSQLSQLite = `
+var createAdminRoleTableSQLite = `
 CREATE TABLE IF NOT EXISTS zz_admin_role (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS zz_admin_role (
 );
 `
 
-var createAdminRoleCasbinTableSQLSQLite = `
+var createAdminRoleCasbinTableSQLite = `
 CREATE TABLE IF NOT EXISTS zz_admin_role_casbin (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   p_type TEXT,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS zz_admin_role_casbin (
 );
 `
 
-var createAdminRoleMenuTableSQLSQLite = `
+var createAdminRoleMenuTableSQLite = `
 CREATE TABLE IF NOT EXISTS zz_admin_role_menu (
   role_id INTEGER NOT NULL,
   menu_id INTEGER NOT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS zz_admin_role_menu (
 );
 `
 
-var createSysLoginLogTableSQLSQLite = `
+var createSysLoginLogTableSQLite = `
 CREATE TABLE IF NOT EXISTS zz_sys_login_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   req_id TEXT,
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS zz_sys_login_log (
 );
 `
 
-var createSysAttachmentTableSQLSQLite = `
+var createSysAttachmentTableSQLite = `
 CREATE TABLE IF NOT EXISTS zz_sys_attachment (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   app_id TEXT NOT NULL,

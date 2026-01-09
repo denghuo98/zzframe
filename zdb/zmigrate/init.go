@@ -30,6 +30,7 @@ func InitDB(ctx g.Ctx) error {
 	})
 
 	if err != nil {
+		g.Log().Warningf(ctx, "获取数据库配置失败: %v", err)
 		g.Log().Warning(ctx, "未配置数据库连接，使用默认 SQLite 数据库")
 		gdb.SetConfig(gdb.Config{
 			"default": getDefaultSQLiteConfig(),
@@ -73,6 +74,7 @@ func initTables(ctx g.Ctx, dbType string) error {
 		"zz_admin_menu":        getCreateTableSQL("admin_menu", dbType),
 		"zz_admin_role":        getCreateTableSQL("admin_role", dbType),
 		"zz_admin_role_menu":   getCreateTableSQL("admin_role_menu", dbType),
+		"zz_admin_role_casbin": getCreateTableSQL("admin_role_casbin", dbType),
 		"zz_sys_login_log":     getCreateTableSQL("sys_login_log", dbType),
 		"zz_sys_attachment":    getCreateTableSQL("sys_attachment", dbType),
 	}
@@ -107,6 +109,8 @@ func getCreateTableSQL(tableKey, dbType string) string {
 			return createAdminRoleTableSQL
 		case "admin_role_menu":
 			return createAdminRoleMenuTableSQL
+		case "admin_role_casbin":
+			return createAdminRoleCasbinTableSQL
 		case "sys_login_log":
 			return createSysLoginLogTableSQL
 		case "sys_attachment":
@@ -115,19 +119,21 @@ func getCreateTableSQL(tableKey, dbType string) string {
 	case "sqlite":
 		switch tableKey {
 		case "admin_member":
-			return createAdminMemberTableSQLSQLite
+			return createAdminMemberTableSQLite
 		case "admin_member_role":
-			return createAdminMemberRoleTableSQLSQLite
+			return createAdminMemberRoleTableSQLite
 		case "admin_menu":
-			return createAdminMenuTableSqlSQLite
+			return createAdminMenuTableSQLite
 		case "admin_role":
-			return createAdminRoleTableSQLSQLite
+			return createAdminRoleTableSQLite
 		case "admin_role_menu":
-			return createAdminRoleMenuTableSQLSQLite
+			return createAdminRoleMenuTableSQLite
+		case "admin_role_casbin":
+			return createAdminRoleCasbinTableSQLite
 		case "sys_login_log":
-			return createSysLoginLogTableSQLSQLite
+			return createSysLoginLogTableSQLite
 		case "sys_attachment":
-			return createSysAttachmentTableSQLSQLite
+			return createSysAttachmentTableSQLite
 		}
 	}
 	return ""
@@ -144,8 +150,8 @@ func tableExists(ctx g.Ctx, tableName string) bool {
 
 	switch config[0].Type {
 	case "mysql":
-		query := "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_name = ?"
-		result, err = g.DB().GetOne(ctx, query, tableName)
+		query := "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_name = ? and table_schema = ?"
+		result, err = g.DB().GetOne(ctx, query, tableName, config[0].Name)
 	case "sqlite":
 		query := "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name=?"
 		result, err = g.DB().GetOne(ctx, query, tableName)
@@ -156,7 +162,7 @@ func tableExists(ctx g.Ctx, tableName string) bool {
 		return false
 	}
 	count = gconv.Int(result["count"])
-
+	g.Log().Infof(ctx, "表 %s 存在: %d", tableName, count)
 	return count > 0
 }
 

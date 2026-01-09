@@ -68,7 +68,7 @@ var createAdminRoleTableSQL = `
 CREATE TABLE zz_admin_role (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '角色ID',
   name varchar(32) NOT NULL COMMENT '角色名称',
-  key varchar(128) NOT NULL COMMENT '角色权限字符串',
+  ` + "`key`" + ` varchar(128) NOT NULL COMMENT '角色权限字符串',
   remark varchar(255) DEFAULT NULL COMMENT '备注',
   sort int NOT NULL DEFAULT '0' COMMENT '排序',
   status tinyint(1) NOT NULL DEFAULT '1' COMMENT '角色状态',
@@ -76,7 +76,7 @@ CREATE TABLE zz_admin_role (
   updated_at datetime DEFAULT NULL COMMENT '修改时间',
   PRIMARY KEY (id) USING BTREE,
   KEY idx_name (name),
-  KEY idx_key (key)
+  KEY idx_key (` + "`key`" + `)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='管理员_角色信息';
 `
 
