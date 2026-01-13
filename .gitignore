@@ -45,4 +45,5 @@ dist/
 
 *.db
 *.sqlite
-config.yaml
+*config.yaml
+tmp*

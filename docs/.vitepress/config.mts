@@ -5,6 +5,7 @@ export default defineConfig({
   base: '/zzframe/',
   title: "ZZFrame",
   description: "ZZ 科技开发框架",
+  ignoreDeadLinks: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
