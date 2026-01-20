@@ -9,6 +9,7 @@ import (
 
 	"github.com/denghuo98/zzframe/internal/dao"
 	"github.com/denghuo98/zzframe/internal/model/entity"
+	"github.com/denghuo98/zzframe/web/zcasbin"
 	"github.com/denghuo98/zzframe/web/zcontext"
 	"github.com/denghuo98/zzframe/zconsts"
 	"github.com/denghuo98/zzframe/zdb/zgorm"
@@ -71,7 +72,7 @@ func (s *sMenu) Edit(ctx g.Ctx, in *adminSchema.MenuEditInput) error {
 			return gerror.Wrap(err, zconsts.ErrorORM)
 		}
 	}
-	return nil
+	return zcasbin.Refresh(ctx)
 }
 
 func (s *sMenu) Delete(ctx g.Ctx, in *adminSchema.MenuDeleteInput) error {

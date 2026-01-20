@@ -43,7 +43,7 @@ func (s *sCommonSite) InitSuperAdmin(ctx g.Ctx) (err error) {
 	}
 	// 先判断是否存在角色
 	var roleEntity *entity.AdminRole
-	if err = dao.AdminRole.Ctx(ctx).Where(dao.AdminRole.Columns().Name, zconsts.SuperRoleKey).Scan(&roleEntity); err != nil {
+	if err = dao.AdminRole.Ctx(ctx).Where(dao.AdminRole.Columns().Key, zconsts.SuperRoleKey).Scan(&roleEntity); err != nil {
 		return gerror.Wrap(err, zconsts.ErrorORM)
 	}
 	if roleEntity == nil {
