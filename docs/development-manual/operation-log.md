@@ -275,6 +275,36 @@ func (s *sAdminMember) Edit(ctx g.Ctx, in *adminSchema.MemberEditInput) (err err
 
 > **注意**：异步模式存在极小概率的日志丢失风险。
 
+### 5.1 队列配置
+
+操作日志使用 ZZFrame 内置队列系统进行异步处理，支持磁盘队列和 Redis 队列两种模式。
+
+#### 磁盘队列（单机推荐）
+
+```yaml
+queue:
+  switch: true              # 启用队列
+  driver: "disk"           # 使用磁盘队列
+  groupName: "oper_log"    # 队列组名
+  disk:
+    path: "./tmp/diskqueue"     # 队列数据目录
+    batchSize: 100             # 批量处理数量
+    batchTime: 1               # 批量处理间隔（秒）
+```
+
+#### Redis 队列（分布式推荐）
+
+```yaml
+queue:
+  switch: true
+  driver: "redis"
+  groupName: "oper_log"
+  redis:
+    host: "127.0.0.1:6379"
+    password: ""
+    db: 1
+```
+
 ## 6. 数据生命周期管理
 
 操作日志作为辅助业务数据，不应永久存储于主数据库。合理的生命周期管理可以降低存储成本、提升查询性能。
@@ -311,7 +341,6 @@ ALTER TABLE `sys_oper_log_archive`
     ADD COLUMN `archived_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '归档时间';
 ```
 
-### 6.3 定时归档任务
 
 #### Go 代码实现
 
@@ -393,6 +422,12 @@ type OperLogListReq struct {
     Page      int    `json:"page" d:"1"`
     PageSize  int    `json:"pageSize" d:"20"`
 }
+
+type OperLogListRes struct {
+    List  []entity.SysOperLog `json:"list"`
+    Total int                 `json:"total"`
+    Page  int                 `json:"page"`
+}
 ```
 
 ### 7.2 查询服务
@@ -402,6 +437,7 @@ func (s *sOperLog) List(ctx g.Ctx, in *OperLogListReq) (list []entity.SysOperLog
     m := dao.SysOperLog.Ctx(ctx)
     if in.BizType != "" { m = m.Where("biz_type", in.BizType) }
     if in.BizId != "" { m = m.Where("biz_id", in.BizId) }
+    if in.Operator != "" { m = m.WhereLike("oper_name", "%"+in.Operator+"%") }
     if in.StartTime != "" && in.EndTime != "" {
         m = m.WhereBetween("created_at", in.StartTime, in.EndTime)
     }
@@ -411,11 +447,19 @@ func (s *sOperLog) List(ctx g.Ctx, in *OperLogListReq) (list []entity.SysOperLog
 }
 
 // GetHistoryWithArchive 跨表查询（含归档数据）
+// 注意：显式列出字段，避免 archived_at 导致 UNION 失败
 func (s *sOperLog) GetHistoryWithArchive(ctx g.Ctx, bizType, bizId string) (list []entity.SysOperLog, err error) {
-    sql := `(SELECT * FROM sys_oper_log WHERE biz_type=? AND biz_id=?)
-            UNION ALL
-            (SELECT * FROM sys_oper_log_archive WHERE biz_type=? AND biz_id=?)
-            ORDER BY id DESC`
+    // 定义公共字段（两表都有的字段）
+    fields := "id, title, biz_id, biz_type, method, request_uri, oper_param, " +
+              "result, diff, oper_id, oper_name, oper_ip, created_at"
+    
+    sql := fmt.Sprintf(`
+        (SELECT %s FROM sys_oper_log WHERE biz_type=? AND biz_id=?)
+        UNION ALL
+        (SELECT %s FROM sys_oper_log_archive WHERE biz_type=? AND biz_id=?)
+        ORDER BY id DESC
+    `, fields, fields)
+    
     err = g.DB().GetScan(ctx, &list, sql, bizType, bizId, bizType, bizId)
     return
 }
