@@ -226,7 +226,7 @@ func (s *sAdminRole) updateMenus(tx gdb.TX, in *adminSchema.RoleUpdateMenuInput)
 			return gerror.Wrap(err, zconsts.ErrorORM)
 		}
 	}
-	return nil
+	return zcasbin.Refresh(tx.GetCtx())
 }
 
 // embedMenus 查询中嵌入角色的菜单ID列表
