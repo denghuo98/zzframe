@@ -38,12 +38,11 @@ ALTER TABLE `sys_oper_log` ADD INDEX `idx_biz` (`biz_type`, `biz_id`);
 
 ### 2.3 权限控制
 
-审计日志一旦写入就**不应被修改**，否则无法保证日志的真实性。建议按角色分配数据库权限：
+审计日志一旦写入就**不应被修改**，因此只需要写入和归档两种权限：
 
 | 角色 | 权限 | 说明 |
 |------|------|------|
 | **应用服务账号** | `INSERT` only | 只能写入，禁止修改删除 |
-| **管理员查询** | `SELECT` | 只能查看日志 |
 | **归档任务账号** | `SELECT, INSERT, DELETE` | 负责数据迁移 |
 
 ```sql
@@ -51,11 +50,7 @@ ALTER TABLE `sys_oper_log` ADD INDEX `idx_biz` (`biz_type`, `biz_id`);
 CREATE USER 'oper_log_writer'@'%' IDENTIFIED BY 'strong_password';
 GRANT INSERT ON your_database.sys_oper_log TO 'oper_log_writer'@'%';
 
--- 2. 只读查询账号
-CREATE USER 'oper_log_reader'@'%' IDENTIFIED BY 'read_password';
-GRANT SELECT ON your_database.sys_oper_log TO 'oper_log_reader'@'%';
-
--- 3. 归档任务账号
+-- 2. 归档任务账号（迁移数据用）
 CREATE USER 'oper_log_archiver'@'localhost' IDENTIFIED BY 'archive_password';
 GRANT SELECT, INSERT, DELETE ON your_database.sys_oper_log TO 'oper_log_archiver'@'localhost';
 GRANT SELECT, INSERT, DELETE ON your_database.sys_oper_log_archive TO 'oper_log_archiver'@'localhost';
@@ -131,9 +126,9 @@ const (
 
 ### 4.2 封装辅助工具
 
+使用**变长参数**实现统一的审计接口，同时支持单条和批量操作，降低使用心智负担。
 
 ```go
-
 package zutils
 
 import (
@@ -149,53 +144,56 @@ type AuditData struct {
     New     interface{} `json:"new"`
 }
 
-// SetAudit 记录单条审计数据
-func SetAudit(ctx g.Ctx, bizType string, bizId string, oldData interface{}, newData interface{}) {
-    data := AuditData{
+// SetAudit 记录审计数据（支持单条和批量）
+// 使用变长参数，传入一个或多个 AuditData
+func SetAudit(ctx g.Ctx, items ...AuditData) {
+    if len(items) == 0 {
+        return
+    }
+    zcontext.SetData(ctx, "audit_data", items)
+}
+
+// NewAudit 创建审计数据的便捷方法
+func NewAudit(bizType, bizId string, oldData, newData interface{}) AuditData {
+    return AuditData{
         BizType: bizType,
         BizId:   bizId,
         Old:     oldData,
         New:     newData,
     }
-    zcontext.SetData(ctx, "audit_data", data)
-}
-
-// SetAuditBatch 批量记录审计数据（用于批量操作场景）
-func SetAuditBatch(ctx g.Ctx, items []AuditData) {
-    zcontext.SetData(ctx, "audit_data_batch", items)
 }
 ```
 
-#### 批量操作使用示例
+#### 使用示例
 
 ```go
-// 批量删除用户
+// 单条操作
+func (s *sUser) Edit(ctx g.Ctx, in *UserEditInput) error {
+    oldData, _ := dao.User.Ctx(ctx).WherePri(in.Id).One()
+    // ... 执行更新 ...
+    zutils.SetAudit(ctx, zutils.NewAudit("user", gconv.String(in.Id), oldData, in))
+    return nil
+}
+
+// 批量删除
 func (s *sUser) BatchDelete(ctx g.Ctx, ids []int) error {
-    // 1. 查询所有旧数据
     oldList, _ := dao.User.Ctx(ctx).WhereIn("id", ids).All()
-    
-    // 2. 执行删除
     _, err := dao.User.Ctx(ctx).WhereIn("id", ids).Delete()
     if err != nil {
         return err
     }
     
-    // 3. 构建批量审计记录
+    // 批量记录：直接传入多个 AuditData
     var items []zutils.AuditData
     for _, old := range oldList {
-        items = append(items, zutils.AuditData{
-            BizType: "user",
-            BizId:   gconv.String(old["id"]),
-            Old:     old,
-            New:     nil, // 删除操作 new 为 nil
-        })
+        items = append(items, zutils.NewAudit("user", gconv.String(old["id"]), old, nil))
     }
-    zutils.SetAuditBatch(ctx, items)
+    zutils.SetAudit(ctx, items...)  // 使用 ... 展开切片
     return nil
 }
 ```
 
-> **注意**：Middleware 需要同时处理 `audit_data`（单条）和 `audit_data_batch`（批量）两种情况。
+> **优点**：统一使用 `SetAudit`，无需区分单条和批量，Middleware 也只需处理一个 Context Key。
 
 ### 4.3 改造 Middleware
 
