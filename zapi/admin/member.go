@@ -62,3 +62,12 @@ type UpdatePwdReq struct {
 
 type UpdatePwdRes struct {
 }
+
+// ResetPwdReq 重置用户密码
+type ResetPwdReq struct {
+	g.Meta `path:"/member/reset-pwd" method:"post" tags:"SYS-02-用户管理" summary:"重置用户密码"`
+	adminSchema.MemberResetPasswordInput
+}
+
+type ResetPwdRes struct {
+}

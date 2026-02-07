@@ -32,3 +32,12 @@ type SiteAccountLoginReq struct {
 type SiteAccountLoginRes struct {
 	commonSchema.SiteLoginOutput
 }
+
+// SiteRoutesReq 获取路由信息
+type SiteRoutesReq struct {
+	g.Meta `path:"/site/routes" method:"get" tags:"SYS-00-系统管理" summary:"获取路由信息"`
+}
+
+type SiteRoutesRes struct {
+	commonSchema.SiteRoutesOutput
+}

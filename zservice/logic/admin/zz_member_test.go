@@ -3,6 +3,7 @@ package admin
 import (
 	"testing"
 
+	"github.com/gogf/gf/v2/crypto/gmd5"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/denghuo98/zzframe/internal/dao"
 	"github.com/denghuo98/zzframe/internal/model/entity"
+	"github.com/denghuo98/zzframe/zconsts"
 	"github.com/denghuo98/zzframe/zschema/admin"
 	"github.com/denghuo98/zzframe/zschema/zform"
 	"github.com/denghuo98/zzframe/zservice"
@@ -339,8 +341,36 @@ func TestAdminMember_List(t *testing.T) {
 		t.AssertNil(err)
 		roleId2 := role2.Id
 
-		// 测试空列表场景
-		t.Run("EmptyList", func(subT *testing.T) {
+		// 创建超级管理员角色
+		superAdminRole := admin.RoleEditInput{
+			AdminRole: entity.AdminRole{
+				Name:   "超级管理员",
+				Key:    zconsts.SuperRoleKey, // 使用常量
+				Remark: "超级管理员角色",
+				Sort:   1,
+				Status: 1,
+			},
+		}
+		superRole, err := roleService.Edit(ctx, superAdminRole)
+		t.AssertNil(err)
+		superRoleId := superRole.Id
+
+		// 创建超级管理员用户
+		superAdminUser := &admin.MemberEditInput{
+			Username: zconsts.DefaultSuperAdminUsername, // "superAdmin"
+			Password: "super123",
+			RealName: "超级管理员",
+			RoleIds:  []int64{superRoleId},
+			Email:    "super@example.com",
+			Mobile:   "13800000000",
+			Sex:      1,
+			Status:   1,
+		}
+		err = s.Edit(ctx, superAdminUser)
+		t.AssertNil(err)
+
+		// 测试超级管理员用户被过滤
+		t.Run("SuperAdminFiltered", func(subT *testing.T) {
 			input := &admin.MemberListInput{
 				PageReq: zform.PageReq{
 					Page:    1,
@@ -350,9 +380,9 @@ func TestAdminMember_List(t *testing.T) {
 
 			out, total, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(total, 0)
+			t.Assert(total, 0) // 总数也过滤掉超级管理员用户
 			t.AssertNE(out, nil)
-			t.Assert(len(out.List), 0)
+			t.Assert(len(out.List), 0) // 列表中过滤掉超级管理员用户
 		})
 
 		// 创建测试用户数据
@@ -416,9 +446,9 @@ func TestAdminMember_List(t *testing.T) {
 
 			out, total, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(total, 4)
+			t.Assert(total, 4) // 总数也过滤掉超级管理员用户
 			t.AssertNE(out, nil)
-			t.Assert(len(out.List), 4)
+			t.Assert(len(out.List), 4) // 列表中过滤掉超级管理员用户
 
 			// 验证数据按 ID 降序排列
 			for i := 0; i < len(out.List)-1; i++ {
@@ -507,8 +537,8 @@ func TestAdminMember_List(t *testing.T) {
 
 			out, total, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(total, 3)
-			t.Assert(len(out.List), 3)
+			t.Assert(total, 3)         // 启用状态的用户总数（过滤掉超级管理员）
+			t.Assert(len(out.List), 3) // 列表中过滤掉超级管理员
 			for _, item := range out.List {
 				t.Assert(item.Status, 1)
 			}
@@ -553,7 +583,7 @@ func TestAdminMember_List(t *testing.T) {
 
 			out, total, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(total, 4)
+			t.Assert(total, 4) // 总数过滤掉超级管理员用户
 			t.Assert(len(out.List), 2)
 
 			// 第二页，每页2条
@@ -563,7 +593,7 @@ func TestAdminMember_List(t *testing.T) {
 			t.Assert(total, 4)
 			t.Assert(len(out.List), 2)
 
-			// 第三页，每页2条（超出范围）
+			// 第三页，每页2条
 			input.Page = 3
 			out, total, err = s.List(ctx, input)
 			t.AssertNil(err)
@@ -582,7 +612,7 @@ func TestAdminMember_List(t *testing.T) {
 
 			out, total, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(total, 4)
+			t.Assert(total, 4) // 总数过滤掉超级管理员用户
 
 			// 验证每个用户的角色数据
 			for _, item := range out.List {
@@ -645,6 +675,155 @@ func TestAdminMember_List(t *testing.T) {
 			t.AssertNil(err)
 			t.Assert(total, 0)
 			t.Assert(len(out.List), 0)
+		})
+	})
+}
+
+func TestAdminMember_UpdateProfileAndPassword(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		// 设置测试数据库
+		setupTestDBForMember()
+		defer cleanupTestDBForMember()
+
+		ctx := gctx.New()
+		s := &sAdminMember{}
+
+		// 创建超级管理员角色
+		superAdminRole := admin.RoleEditInput{
+			AdminRole: entity.AdminRole{
+				Name:   "超级管理员",
+				Key:    zconsts.SuperRoleKey,
+				Remark: "超级管理员角色",
+				Sort:   1,
+				Status: 1,
+			},
+		}
+		roleService := &sAdminRole{}
+		superRole, err := roleService.Edit(ctx, superAdminRole)
+		t.AssertNil(err)
+		superRoleId := superRole.Id
+
+		// 创建超级管理员用户
+		superAdminUser := &admin.MemberEditInput{
+			Username: zconsts.DefaultSuperAdminUsername,
+			Password: "super123",
+			RealName: "超级管理员",
+			RoleIds:  []int64{superRoleId},
+			Email:    "super@example.com",
+			Mobile:   "13800000000",
+			Sex:      1,
+			Status:   1,
+		}
+		err = s.Edit(ctx, superAdminUser)
+		t.AssertNil(err)
+
+		// 获取超级管理员用户ID
+		superUserRecord, err := dao.AdminMember.Ctx(ctx).Where("username", zconsts.DefaultSuperAdminUsername).One()
+		t.AssertNil(err)
+		superUserId := superUserRecord["id"].Int64()
+
+		// 测试 UpdateProfile - 超级管理员不能修改个人资料
+		t.Run("UpdateProfileSuperAdmin", func(subT *testing.T) {
+			input := &admin.MemberUpdateProfileInput{
+				Id:       superUserId,
+				RealName: "修改后的超级管理员",
+				Email:    "newsuper@example.com",
+				Mobile:   "13900000000",
+				Sex:      2,
+			}
+
+			err := s.UpdateProfile(ctx, input)
+			t.AssertNE(err, nil)
+			t.Assert(err.Error(), "超级管理员资料不能修改")
+		})
+
+		// 测试 UpdatePassword - 超级管理员不能修改密码
+		t.Run("UpdatePasswordSuperAdmin", func(subT *testing.T) {
+			input := &admin.MemberUpdatePasswordInput{
+				Id:          superUserId,
+				OldPassword: "super123",
+				NewPassword: "newpassword123",
+			}
+
+			err := s.UpdatePassword(ctx, input)
+			t.AssertNE(err, nil)
+			t.Assert(err.Error(), "超级管理员密码不能修改")
+		})
+	})
+}
+
+func TestAdminMember_ResetPassword(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		// 设置测试数据库
+		setupTestDBForMember()
+		defer cleanupTestDBForMember()
+
+		ctx := gctx.New()
+		s := &sAdminMember{}
+
+		// 获取测试角色ID
+		testRole, err := dao.AdminRole.Ctx(ctx).Where("name", "测试角色").One()
+		t.AssertNil(err)
+		roleId := testRole["id"].Int64()
+
+		// 先创建一个测试用户
+		editInput := &admin.MemberEditInput{
+			Username: "resetuser",
+			Password: "oldpassword",
+			RealName: "重置密码用户",
+			RoleIds:  []int64{roleId},
+			Email:    "reset@example.com",
+			Mobile:   "13900139000",
+			Sex:      1,
+			Status:   1,
+		}
+		err = s.Edit(ctx, editInput)
+		t.AssertNil(err)
+
+		// 获取创建的用户ID
+		userRecord, err := dao.AdminMember.Ctx(ctx).Where("username", "resetuser").One()
+		t.AssertNil(err)
+		userId := userRecord["id"].Int64()
+
+		// 测试重置密码 - 正常情况
+		t.Run("ResetPassword", func(subT *testing.T) {
+			input := &admin.MemberResetPasswordInput{
+				Id: userId,
+			}
+
+			err := s.ResetPassword(ctx, input)
+			t.AssertNil(err)
+
+			// 验证密码是否被重置为默认密码
+			updatedRecord, err := dao.AdminMember.Ctx(ctx).Where("id", userId).One()
+			t.AssertNil(err)
+
+			// 获取用户的盐值
+			salt := updatedRecord["salt"].String()
+			expectedHash := gmd5.MustEncryptString("123456" + salt)
+			t.Assert(updatedRecord["password_hash"], expectedHash)
+		})
+
+		// 测试重置密码 - 用户不存在
+		t.Run("ResetPasswordUserNotExist", func(subT *testing.T) {
+			input := &admin.MemberResetPasswordInput{
+				Id: 99999, // 不存在的用户ID
+			}
+
+			err := s.ResetPassword(ctx, input)
+			t.AssertNE(err, nil)
+			t.Assert(err.Error(), "用户不存在")
+		})
+
+		// 测试重置密码 - 用户ID为空
+		t.Run("ResetPasswordEmptyId", func(subT *testing.T) {
+			input := &admin.MemberResetPasswordInput{
+				Id: 0,
+			}
+
+			err := s.ResetPassword(ctx, input)
+			t.AssertNE(err, nil)
+			t.Assert(err.Error(), "用户ID不能为空")
 		})
 	})
 }

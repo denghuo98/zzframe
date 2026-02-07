@@ -359,7 +359,7 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result.List), 4)
+			t.Assert(len(result.List), 3) // 过滤掉超级管理员角色
 		})
 
 		// 测试按名称模糊查询
@@ -374,7 +374,7 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result.List), 2) // "管理员" 和 "超级管理员"
+			t.Assert(len(result.List), 1) // 只匹配"管理员"，超级管理员被过滤
 
 			// 验证结果包含正确的角色
 			names := make([]string, len(result.List))
@@ -382,7 +382,7 @@ func TestAdminRole_List(t *testing.T) {
 				names[i] = role.Name
 			}
 			t.Assert(garray.NewStrArrayFrom(names).Contains("管理员"), true)
-			t.Assert(garray.NewStrArrayFrom(names).Contains("超级管理员"), true)
+			t.Assert(garray.NewStrArrayFrom(names).Contains("超级管理员"), false) // 超级管理员已被过滤
 		})
 
 		// 测试按标识模糊查询
@@ -397,7 +397,7 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result.List), 2) // "admin" 和 "super_admin"
+			t.Assert(len(result.List), 1) // 只匹配"admin"，super_admin被过滤
 
 			// 验证结果包含正确的角色
 			keys := make([]string, len(result.List))
@@ -405,7 +405,7 @@ func TestAdminRole_List(t *testing.T) {
 				keys[i] = role.Key
 			}
 			t.Assert(garray.NewStrArrayFrom(keys).Contains("admin"), true)
-			t.Assert(garray.NewStrArrayFrom(keys).Contains("super_admin"), true)
+			t.Assert(garray.NewStrArrayFrom(keys).Contains("super_admin"), false) // super_admin已被过滤
 		})
 
 		// 测试按状态精确查询
@@ -420,7 +420,7 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result.List), 3) // 三个启用状态的角色
+			t.Assert(len(result.List), 2) // 两个启用状态的角色（过滤掉超级管理员）
 
 			// 验证所有结果都是启用状态
 			for _, role := range result.List {
@@ -441,7 +441,7 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result.List), 3) // "管理员"、"编辑员"、"超级管理员"
+			t.Assert(len(result.List), 2) // "管理员"、"编辑员"（超级管理员被过滤）
 
 			// 验证结果
 			names := make([]string, len(result.List))
@@ -451,7 +451,7 @@ func TestAdminRole_List(t *testing.T) {
 			}
 			t.Assert(garray.NewStrArrayFrom(names).Contains("管理员"), true)
 			t.Assert(garray.NewStrArrayFrom(names).Contains("编辑员"), true)
-			t.Assert(garray.NewStrArrayFrom(names).Contains("超级管理员"), true)
+			t.Assert(garray.NewStrArrayFrom(names).Contains("超级管理员"), false) // 超级管理员已被过滤
 		})
 
 		// 测试分页功能
@@ -472,7 +472,7 @@ func TestAdminRole_List(t *testing.T) {
 			input.Page = 2
 			result2, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result2.List), 2)
+			t.Assert(len(result2.List), 1) // 总共3条记录，过滤掉超级管理员后第二页只有1条
 
 			// 验证两页数据不同
 			firstPageIds := make([]int64, len(result.List))
@@ -491,7 +491,7 @@ func TestAdminRole_List(t *testing.T) {
 			for _, id := range allIds {
 				idMap[id] = true
 			}
-			t.Assert(len(idMap), 4)
+			t.Assert(len(idMap), 3) // 过滤掉超级管理员后总共3条记录
 		})
 
 		// 测试排序功能（按sort和id升序）
@@ -505,7 +505,7 @@ func TestAdminRole_List(t *testing.T) {
 
 			result, _, err := s.List(ctx, input)
 			t.AssertNil(err)
-			t.Assert(len(result.List), 4)
+			t.Assert(len(result.List), 3) // 过滤掉超级管理员后只有3条记录
 
 			// 验证排序：sort升序，id升序
 			for i := 0; i < len(result.List)-1; i++ {

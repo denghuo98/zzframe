@@ -13,6 +13,7 @@ type ICommonSite interface {
 	InitSuperAdmin(ctx g.Ctx) error
 	AccountLogin(ctx g.Ctx, in *commonSchema.SiteAccountLoginInput) (out *commonSchema.SiteLoginOutput, err error)
 	BindUserContext(ctx g.Ctx, claims *zweb.Identity) error
+	GetRoutes(ctx g.Ctx) (out *commonSchema.SiteRoutesOutput, err error)
 }
 
 type ICommonUpload interface {

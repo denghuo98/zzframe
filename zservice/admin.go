@@ -82,6 +82,10 @@ type IAdminMember interface {
 	// 验证旧密码后更新为新密码
 	UpdatePassword(ctx g.Ctx, in *admin.MemberUpdatePasswordInput) error
 
+	// ResetPassword 重置用户密码
+	// 将用户密码重置为默认密码
+	ResetPassword(ctx g.Ctx, in *admin.MemberResetPasswordInput) error
+
 	// Delete 删除成员
 	// 软删除用户，将用户状态设置为禁用
 	Delete(ctx g.Ctx, in *admin.MemberDeleteInput) error

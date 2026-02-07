@@ -43,3 +43,13 @@ func (c *cSite) AccountLogin(ctx g.Ctx, req *commonApi.SiteAccountLoginReq) (res
 	res.SiteLoginOutput = *out
 	return
 }
+
+func (c *cSite) Routes(ctx g.Ctx, req *commonApi.SiteRoutesReq) (res *commonApi.SiteRoutesRes, err error) {
+	out, err := zservice.CommonSite().GetRoutes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res = new(commonApi.SiteRoutesRes)
+	res.SiteRoutesOutput = *out
+	return
+}

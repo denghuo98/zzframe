@@ -249,3 +249,21 @@ func (s *sCommonSite) BindUserContext(ctx g.Ctx, claims *zweb.Identity) (err err
 
 	return nil
 }
+
+// GetRoutes 获取所有路由信息
+func (s *sCommonSite) GetRoutes(ctx g.Ctx) (out *commonSchema.SiteRoutesOutput, err error) {
+	routes := g.Server().GetRoutes()
+	out = &commonSchema.SiteRoutesOutput{
+		List: make([]*commonSchema.SiteRouteInfo, 0, len(routes)),
+	}
+
+	for _, route := range routes {
+		out.List = append(out.List, &commonSchema.SiteRouteInfo{
+			Method: route.Method,
+			Route:  route.Route,
+			Domain: route.Domain,
+		})
+	}
+
+	return out, nil
+}

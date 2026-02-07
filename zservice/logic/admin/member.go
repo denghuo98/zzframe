@@ -60,6 +60,13 @@ func (s *sAdminMember) List(ctx g.Ctx, in *adminSchema.MemberListInput) (out *ad
 	m := dao.AdminMember.Ctx(ctx)
 	cols := dao.AdminMember.Columns()
 
+	// 过滤掉超级管理员用户
+	// 使用子查询排除拥有超级管理员角色的用户
+	m = m.WhereNotIn(cols.Id, dao.AdminMemberRole.Ctx(ctx).As("mr").
+		InnerJoin(dao.AdminRole.Table()+" r", "mr.role_id = r.id").
+		Where("r.key", zconsts.SuperRoleKey).
+		Fields("mr.member_id"))
+
 	// 条件筛选
 	if in.Username != "" {
 		m = m.WhereLike(cols.Username, "%"+in.Username+"%")
@@ -256,11 +263,18 @@ func (s *sAdminMember) UpdateProfile(ctx g.Ctx, in *adminSchema.MemberUpdateProf
 	if mb == nil {
 		return gerror.New("用户不存在")
 	}
+
+	// 验证是否是超级管理员，超级管理员不能修改个人资料
+	if s.VerifySuperAdmin(ctx, in.Id) {
+		return gerror.New("超级管理员资料不能修改")
+	}
 	cols := dao.AdminMember.Columns()
 	update := g.Map{
 		cols.Avatar:   in.Avatar,
 		cols.RealName: in.RealName,
 		cols.Sex:      in.Sex,
+		cols.Email:    in.Email,
+		cols.Mobile:   in.Mobile,
 	}
 	if _, err = dao.AdminMember.Ctx(ctx).WherePri(in.Id).Data(update).Update(); err != nil {
 		return gerror.Wrap(err, zconsts.ErrorORM)
@@ -281,6 +295,11 @@ func (s *sAdminMember) UpdatePassword(ctx g.Ctx, in *adminSchema.MemberUpdatePas
 		return gerror.New("用户不存在")
 	}
 
+	// 验证是否是超级管理员，超级管理员不能修改密码
+	if s.VerifySuperAdmin(ctx, in.Id) {
+		return gerror.New("超级管理员密码不能修改")
+	}
+
 	if gmd5.MustEncryptString(in.OldPassword+mb.Salt) != mb.PasswordHash {
 		return gerror.New("旧密码错误")
 	}
@@ -290,6 +309,33 @@ func (s *sAdminMember) UpdatePassword(ctx g.Ctx, in *adminSchema.MemberUpdatePas
 
 	update := g.Map{
 		dao.AdminMember.Columns().PasswordHash: gmd5.MustEncryptString(in.NewPassword + mb.Salt),
+	}
+	if _, err = dao.AdminMember.Ctx(ctx).WherePri(in.Id).Data(update).Update(); err != nil {
+		return gerror.Wrap(err, zconsts.ErrorORM)
+	}
+	return nil
+}
+
+func (s *sAdminMember) ResetPassword(ctx g.Ctx, in *adminSchema.MemberResetPasswordInput) (err error) {
+	if in.Id <= 0 {
+		return gerror.New("用户ID不能为空")
+	}
+
+	var mb *entity.AdminMember
+	if err = dao.AdminMember.Ctx(ctx).WherePri(in.Id).Scan(&mb); err != nil {
+		return gerror.Wrap(err, zconsts.ErrorORM)
+	}
+	if mb == nil {
+		return gerror.New("用户不存在")
+	}
+
+	// 验证是否是超级管理员，超级管理员不能重置密码
+	if s.VerifySuperAdmin(ctx, in.Id) {
+		return gerror.New("超级管理员密码不能重置")
+	}
+
+	update := g.Map{
+		dao.AdminMember.Columns().PasswordHash: gmd5.MustEncryptString(zconsts.DefaultUserPassword + mb.Salt),
 	}
 	if _, err = dao.AdminMember.Ctx(ctx).WherePri(in.Id).Data(update).Update(); err != nil {
 		return gerror.Wrap(err, zconsts.ErrorORM)

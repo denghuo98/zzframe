@@ -148,6 +148,9 @@ func (s *sAdminRole) List(ctx g.Ctx, in adminSchema.RoleListInput) (out *adminSc
 		cols = dao.AdminRole.Columns()
 	)
 
+	// 过滤掉超级管理员角色，超级管理员角色不允许修改和删除
+	m = m.WhereNot(cols.Key, zconsts.SuperRoleKey)
+
 	if in.Name != "" {
 		m = m.WhereLike(cols.Name, "%"+in.Name+"%")
 	}

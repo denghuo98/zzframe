@@ -35,8 +35,10 @@ type MemberEditInput struct {
 // MemberUpdateProfileInput 服务层-系统用户更新个人信息入参
 type MemberUpdateProfileInput struct {
 	Id       int64
-	Avatar   string `json:"avatar"   v:"required#头像不能为空"     dc:"头像"`
+	Avatar   string `json:"avatar"   v:"url#头像格式不正确"     dc:"头像"`
 	RealName string `json:"realName"  v:"required#真实姓名不能为空"       dc:"真实姓名"`
+	Email    string `json:"email"     v:"email#邮箱格式不正确"        dc:"邮箱"`
+	Mobile   string `json:"mobile"    v:"phone#手机号格式不正确"        dc:"手机号码"`
 	Sex      int    `json:"sex"         dc:"性别"`
 }
 
@@ -51,6 +53,11 @@ type MemberUpdatePasswordInput struct {
 type MemberResetPwdInput struct {
 	Id       int64
 	Password string `json:"password" v:"required#密码不能为空" dc:"密码"`
+}
+
+// MemberResetPasswordInput 服务层-系统用户重置密码入参（使用默认密码）
+type MemberResetPasswordInput struct {
+	Id int64 `json:"id" v:"required|min:1#用户ID不能为空|用户ID不能小于1" dc:"用户ID"`
 }
 
 // MemberUpdateRoleInput 服务层-系统用户更新角色入参

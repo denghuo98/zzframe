@@ -6,6 +6,7 @@
 *.dylib
 bin/
 build/
+main
 
 # Test binary
 *.test

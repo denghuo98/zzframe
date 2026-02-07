@@ -1,8 +1,10 @@
 package admin
 
 import (
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 
+	"github.com/denghuo98/zzframe/web/zcontext"
 	adminApi "github.com/denghuo98/zzframe/zapi/admin"
 	"github.com/denghuo98/zzframe/zservice"
 )
@@ -52,6 +54,10 @@ func (c *cMember) Delete(ctx g.Ctx, req *adminApi.DeleteReq) (res *adminApi.Dele
 
 // UpdateProfile 更新用户资料
 func (c *cMember) UpdateProfile(ctx g.Ctx, req *adminApi.UpdateProfileReq) (res *adminApi.UpdateProfileRes, err error) {
+	// 只能修改自己的资料
+	if req.MemberUpdateProfileInput.Id != zcontext.GetUserId(ctx) {
+		return nil, gerror.New("无权限修改他人资料")
+	}
 	if err = zservice.AdminMember().UpdateProfile(ctx, &req.MemberUpdateProfileInput); err != nil {
 		return nil, err
 	}
@@ -60,8 +66,20 @@ func (c *cMember) UpdateProfile(ctx g.Ctx, req *adminApi.UpdateProfileReq) (res 
 
 // UpdatePwd 更新用户密码
 func (c *cMember) UpdatePwd(ctx g.Ctx, req *adminApi.UpdatePwdReq) (res *adminApi.UpdatePwdRes, err error) {
+	// 只能修改自己的密码
+	if req.MemberUpdatePasswordInput.Id != zcontext.GetUserId(ctx) {
+		return nil, gerror.New("无权限修改他人密码")
+	}
 	if err = zservice.AdminMember().UpdatePassword(ctx, &req.MemberUpdatePasswordInput); err != nil {
 		return nil, err
 	}
 	return &adminApi.UpdatePwdRes{}, nil
+}
+
+// ResetPwd 重置用户密码
+func (c *cMember) ResetPwd(ctx g.Ctx, req *adminApi.ResetPwdReq) (res *adminApi.ResetPwdRes, err error) {
+	if err = zservice.AdminMember().ResetPassword(ctx, &req.MemberResetPasswordInput); err != nil {
+		return nil, err
+	}
+	return &adminApi.ResetPwdRes{}, nil
 }
