@@ -172,6 +172,7 @@ func (s *sMenu) generateNuxtUIMenus(menuList []*adminSchema.MenuTree) []*adminSc
 				Icon:   menu.Icon,
 				Hidden: menu.Hidden == 1,
 				Sort:   menu.Sort,
+				IsRoot: menu.Pid == 0 && menu.Type == 1,
 			},
 			Children: s.generateNuxtUIMenus(menu.Children),
 		})

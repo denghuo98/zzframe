@@ -49,6 +49,7 @@ type MenuDynamicItemMeta struct {
 	Icon   string `json:"icon,omitempty" dc:"菜单图标"`
 	Hidden bool   `json:"hidden" dc:"是否隐藏"`
 	Sort   int    `json:"sort,omitempty" dc:"排序,越小越靠前"`
+	IsRoot bool   `json:"isRoot" dc:"是否根菜单"`
 }
 
 type MenuDynamicItem struct {
