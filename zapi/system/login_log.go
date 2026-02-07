@@ -25,3 +25,13 @@ type SysLoginLogListRes struct {
 	zform.PageRes
 	systemSchema.SysLoginLogListOutput
 }
+
+// SysLoginLogExportReq 导出登录日志
+type SysLoginLogExportReq struct {
+	g.Meta `path:"/system/login-log/export" method:"get" tags:"SYS-10-登录日志" summary:"导出登录日志"`
+	systemSchema.SysLoginLogExportInput
+}
+
+type SysLoginLogExportRes struct {
+	FilePath string `json:"filePath" dc:"文件路径"`
+}

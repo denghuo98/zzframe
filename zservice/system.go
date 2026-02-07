@@ -18,6 +18,7 @@ type ISysLoginLog interface {
 	RealWrite(ctx g.Ctx, data entity.SysLoginLog) (err error)
 	Delete(ctx g.Ctx, in *systemSchema.SysLoginLogDeleteInput) (err error)
 	List(ctx g.Ctx, in *systemSchema.SysLoginLogListInput) (out *systemSchema.SysLoginLogListOutput, totalCount int, err error)
+	Export(ctx g.Ctx, in *systemSchema.SysLoginLogExportInput) (filePath string, err error)
 }
 
 var (
