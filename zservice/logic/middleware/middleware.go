@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -27,9 +29,13 @@ func NewMiddleware() *sMiddleware {
 
 // Ctx 初始化上下文
 func (s *sMiddleware) Ctx(r *ghttp.Request) {
-
 	data := make(g.Map)
-	data["request.body"] = gjson.New(r.GetBodyString())
+
+	// 只对非 multipart 请求解析 body，避免文件上传时切片越界
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/") {
+		data["request.body"] = gjson.New(r.GetBodyString())
+	}
 
 	zcontext.Init(r, &webSchema.Context{
 		Data: data,
