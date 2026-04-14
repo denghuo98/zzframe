@@ -19,15 +19,14 @@ func (s *sMiddleware) AdminAuth(r *ghttp.Request) {
 		ctx  = r.Context()
 		path = r.URL.Path
 	)
-
-	if err := s.DeliverUserContext(r); err != nil {
-		zresp.JsonExit(r, gcode.CodeNotAuthorized.Code(), err.Error())
-		return
-	}
-
 	// 不需要验证权限
 	if s.IsExceptAuth(ctx, path) {
 		r.Middleware.Next()
+		return
+	}
+	
+	if err := s.DeliverUserContext(r); err != nil {
+		zresp.JsonExit(r, gcode.CodeNotAuthorized.Code(), err.Error())
 		return
 	}
 
