@@ -51,10 +51,16 @@ func (s *sMiddleware) CORS(r *ghttp.Request) {
 	r.Middleware.Next()
 }
 
-// // DeliverUserContext 将用户信息传递到上下文中
+// DeliverUserContext 将用户信息传递到上下文中
 func (s *sMiddleware) DeliverUserContext(r *ghttp.Request) (err error) {
 	user, err := ztoken.ParseLoginUser(r)
 	if err != nil {
+		// 若解析失败，检查是否启用了匿名身份
+		anonymousCfg, cfgErr := zservice.SystemConfig().GetAnonymousConfig(r.Context())
+		if cfgErr == nil && anonymousCfg.Enabled {
+			zcontext.SetUser(r.Context(), &anonymousCfg.Identity)
+			return nil
+		}
 		return
 	}
 

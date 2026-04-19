@@ -72,6 +72,15 @@ func (s *sSystemConfig) GetSuperAdmin(ctx g.Ctx) (conf *webSchema.SuperAdminConf
 	return
 }
 
+func (s *sSystemConfig) GetAnonymousConfig(ctx g.Ctx) (conf *webSchema.AnonymousConfig, err error) {
+	conf = &webSchema.AnonymousConfig{}
+	v := g.Cfg().MustGet(ctx, "system.anonymous")
+	if v != nil {
+		err = v.Struct(conf)
+	}
+	return
+}
+
 func (s *sSystemConfig) GetCacheConfig(ctx g.Ctx) (conf *webSchema.CacheConfig, err error) {
 	conf = &webSchema.CacheConfig{}
 	v := g.Cfg().MustGet(ctx, "system.cache")

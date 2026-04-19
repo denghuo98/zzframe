@@ -19,15 +19,28 @@ func (s *sMiddleware) AdminAuth(r *ghttp.Request) {
 		ctx  = r.Context()
 		path = r.URL.Path
 	)
-	// 不需要验证权限
-	isExceptAuth := s.IsExceptAuth(ctx, path) 
-	
+
+	isExceptAuth := s.IsExceptAuth(ctx, path)
+
 	if err := s.DeliverUserContext(r); err != nil {
 		if isExceptAuth {
 			r.Middleware.Next()
 			return
 		}
 		zresp.JsonExit(r, gcode.CodeNotAuthorized.Code(), err.Error())
+		return
+	}
+
+	// 匿名身份模式下跳过所有鉴权
+	anonymousCfg, _ := zservice.SystemConfig().GetAnonymousConfig(ctx)
+	if anonymousCfg != nil && anonymousCfg.Enabled {
+		r.Middleware.Next()
+		return
+	}
+
+	// 不需要验证权限
+	if isExceptAuth {
+		r.Middleware.Next()
 		return
 	}
 

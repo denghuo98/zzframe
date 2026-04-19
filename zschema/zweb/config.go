@@ -8,6 +8,11 @@ type SuperAdminConfig struct {
 	Password string `json:"password"`
 }
 
+type AnonymousConfig struct {
+	Enabled  bool     `json:"enabled" dc:"是否启用匿名身份"`
+	Identity Identity `json:"identity" dc:"匿名用户信息"`
+}
+
 type CacheConfig struct {
 	Adapter string `json:"adapter" dc:"缓存适配器"`  // redis | file
 	FileDir string `json:"fileDir" dc:"文件缓存目录"` // 文件缓存目录，当adapter为file时必填

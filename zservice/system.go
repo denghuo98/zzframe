@@ -11,6 +11,7 @@ import (
 type ISystemConfig interface {
 	LoadConfig(ctx g.Ctx) (err error)
 	GetSuperAdmin(ctx g.Ctx) (conf *webSchema.SuperAdminConfig, err error)
+	GetAnonymousConfig(ctx g.Ctx) (conf *webSchema.AnonymousConfig, err error)
 }
 
 type ISysLoginLog interface {
