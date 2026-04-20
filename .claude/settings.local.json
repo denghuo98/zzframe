@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version:*)",
+      "Bash(mysql:*)",
+      "Bash(go run:*)",
+      "Bash(curl:*)",
+      "Bash(sqlite3:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
+    ]
+  }
+}
